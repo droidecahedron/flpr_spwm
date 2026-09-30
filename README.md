@@ -3,7 +3,7 @@
 Drives a software PWM through the FLPR, the small extra processor inside the nRF54L15.
 
 ## What it's for
-Two output pins drive the two sides of an H-bridge into a piezo. Each pin sends a train of short pulses whose widths follow a sine wave, one side for the positive half and the other side for the negative half. Both pins must never be on at once, there has to be a short gap (dead time) between them, and the pulses must keep coming without the main processor touching every one.
+Drives two pins with any on/off pattern you like, in 7.8 ns steps, for when the PWM peripheral doesn't do exactly what you want. The pattern plays on its own without the main processor touching every edge, and the two pins are never on at once, with a gap (dead time) you choose between them. The sine-shaped pulse train in `src/main.c` is one example of a pattern.
 
 ## What it does
 - The main processor works out when each of two output pins should turn on and off.
@@ -28,7 +28,7 @@ The frequency can only be `tick x M / L`: M sine cycles in a buffer of L ticks, 
  FLPR             reads a word, hands it to the pin shifter, repeats
    |  one 2-bit step per tick
    v
- P2.01 leg A / P2.02 leg B  ->  gate driver  ->  H-bridge  ->  piezo
+ P2.01 pin A / P2.02 pin B  ->  whatever you connect
    |
  FLPR  --DONE doorbell-->  main processor
 ```
