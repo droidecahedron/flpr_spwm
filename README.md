@@ -28,7 +28,7 @@ The frequency can only be `tick x M / L`: M sine cycles in a buffer of L ticks, 
  FLPR             reads a word, hands it to the pin shifter, repeats
    |  one 2-bit step per tick
    v
- P2.01 pin A / P2.02 pin B  ->  whatever you connect
+ P2.01 pin A / P2.02 pin B  ->  some strange waveform requiring hardware
    |
  FLPR  --DONE doorbell-->  main processor
 ```
