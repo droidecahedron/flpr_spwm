@@ -13,6 +13,7 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/bluetooth/bluetooth.h>
 
 #include "pattern.h"
 #include "spwm.h"
@@ -54,6 +55,44 @@ static const struct bench_case cases[] = {
 #define RETUNE_CYCLES 4
 
 static struct spwm_step steps[MAX_STEPS];
+
+#if defined(CONFIG_FLPR_SPWM_BLE)
+static const struct bt_data ad[] = {
+	BT_DATA_BYTES(BT_DATA_FLAGS, BT_LE_AD_NO_BREDR),
+	BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
+};
+
+/* 20 ms, the shortest advertising interval (BT Core v5.x, Vol 6, Part B, 4.4.2.2.1) */
+#define ADV_INT_20MS 0x20
+
+static int ble_start(void)
+{
+	const struct bt_le_adv_param param =
+		BT_LE_ADV_PARAM_INIT(BT_LE_ADV_OPT_USE_IDENTITY, ADV_INT_20MS, ADV_INT_20MS, NULL);
+	int err;
+
+	err = bt_enable(NULL);
+	if (err) {
+		LOG_ERR("bt_enable failed (err %d)", err);
+		return err;
+	}
+
+	err = bt_le_adv_start(&param, ad, ARRAY_SIZE(ad), NULL, 0);
+	if (err) {
+		LOG_ERR("bt_le_adv_start failed (err %d)", err);
+		return err;
+	}
+
+	LOG_INF("advertising as %s every 20 ms", CONFIG_BT_DEVICE_NAME);
+
+	return 0;
+}
+#else
+static int ble_start(void)
+{
+	return -ENOTSUP;
+}
+#endif /* CONFIG_FLPR_SPWM_BLE */
 
 static int build_sine(const struct bench_case *c, uint32_t f_ref, size_t cycles, uint32_t off)
 {
@@ -170,6 +209,13 @@ int main(void)
 	err = spwm_init();
 	if (err) {
 		return err;
+	}
+
+	if (IS_ENABLED(CONFIG_FLPR_SPWM_BLE)) {
+		err = ble_start();
+		if (err) {
+			return err;
+		}
 	}
 
 	LOG_INF("flpr_spwm on %s, spwm_shm 0x%08x, %u buffer words", CONFIG_BOARD_TARGET,

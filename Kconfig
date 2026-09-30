@@ -1,0 +1,12 @@
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: Apache-2.0
+
+config FLPR_SPWM_BLE
+	bool "Advertise over BLE while the FLPR streams"
+	depends on BT
+	help
+	  Non-connectable advertising at a 20 ms interval, to load the app core
+	  and RAM while the bench cases run (B5, O3). overlay-ble.conf sets it.
+
+source "Kconfig.zephyr"
