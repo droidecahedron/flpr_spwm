@@ -27,6 +27,7 @@ LOG_MODULE_REGISTER(flpr_spwm, LOG_LEVEL_INF);
 enum shape {
 	SHAPE_ALT, /* A, B, A, B at the minimum dead time, worst case for A/B changes */
 	SHAPE_SINE,
+	SHAPE_RETUNE, /* sine at 200 kHz, then retune_hz from a second buffer, then STOP */
 };
 
 struct bench_case {
@@ -36,6 +37,7 @@ struct bench_case {
 	uint16_t dead_ticks;
 	uint32_t loop_cnt; /* 0: run until spwm_stop() after stop_after_us */
 	uint32_t stop_after_us;
+	uint32_t retune_hz;
 };
 
 /* 200 kHz ref, ratio 10 = 2 MHz carrier. Dead time 31.25 ns in every case. */
@@ -45,9 +47,28 @@ static const struct bench_case cases[] = {
 	{"b3_sine_128M", SHAPE_SINE, 0, 4, 2000, 0},
 	{"b4_n100_64M", SHAPE_SINE, 1, 2, 100, 0},
 	{"b4_stop_64M", SHAPE_SINE, 1, 2, 0, 2000},
+	/* period 34 ticks, 4 ref cycles = 1360 ticks = 85 words, no padding */
+	{"b6_retune_64M", SHAPE_RETUNE, 1, 2, 0, 1000, 188235},
 };
 
+#define RETUNE_CYCLES 4
+
 static struct spwm_step steps[MAX_STEPS];
+
+static int build_sine(const struct bench_case *c, uint32_t f_ref, size_t cycles, uint32_t off)
+{
+	uint32_t tick_hz = 128000000U / (c->cnttop + 1U);
+	size_t n = 10 * cycles;
+	int err;
+
+	err = spwm_sine_build(f_ref, 10, 100, c->dead_ticks, tick_hz, steps, n);
+	if (err) {
+		return err;
+	}
+
+	return spwm_compile(steps, n, c->dead_ticks, (uint32_t *)SPWM_BUF(off),
+			    SPWM_SHM_BUF_MAX_WORDS - (off - BUF_OFF) / sizeof(uint32_t));
+}
 
 static int build(const struct bench_case *c)
 {
@@ -67,6 +88,7 @@ static int build(const struct bench_case *c)
 			};
 		}
 	} else {
+		/* SHAPE_SINE and the first buffer of SHAPE_RETUNE */
 		n = 10;
 		err = spwm_sine_build(200000, 10, 100, c->dead_ticks, tick_hz, steps, n);
 		if (err) {
@@ -81,12 +103,22 @@ static int build(const struct bench_case *c)
 static int run_case(const struct bench_case *c)
 {
 	uint32_t t_start, t_done;
+	uint32_t retune_off = 0;
+	int retune_words = 0;
 	int words;
 	int err;
 
 	spwm_marker(true);
 	words = build(c);
+	if (c->shape == SHAPE_RETUNE && words > 0) {
+		retune_off = BUF_OFF + words * sizeof(uint32_t);
+		retune_words = build_sine(c, c->retune_hz, RETUNE_CYCLES, retune_off);
+	}
 	spwm_marker(false);
+	if (retune_words < 0) {
+		LOG_ERR("%s: retune compile failed (err %d)", c->name, retune_words);
+		return retune_words;
+	}
 	if (words < 0) {
 		LOG_ERR("%s: compile failed (err %d)", c->name, words);
 		return words;
@@ -97,6 +129,15 @@ static int run_case(const struct bench_case *c)
 	if (err) {
 		LOG_ERR("%s: spwm_start failed (err %d)", c->name, err);
 		return err;
+	}
+
+	if (c->shape == SHAPE_RETUNE) {
+		k_busy_wait(c->stop_after_us);
+		err = spwm_retune(retune_off, retune_words);
+		if (err) {
+			LOG_ERR("%s: spwm_retune failed (err %d)", c->name, err);
+			return err;
+		}
 	}
 
 	if (c->loop_cnt == 0) {

@@ -32,6 +32,13 @@ void spwm_marker(bool on);
  */
 int spwm_start(uint32_t buf_off, uint32_t words, uint16_t cnttop, uint32_t loop_cnt);
 
+/**
+ * @brief Queue another buffer. The FLPR switches to it at a wrap, one pass after it sees it.
+ *
+ * @retval -EBUSY if the previous retune or stop hasn't been taken yet
+ */
+int spwm_retune(uint32_t buf_off, uint32_t words);
+
 /** @brief Set stop_req and ring STOP. The FLPR takes it at the next buffer wrap. */
 int spwm_stop(void);
 

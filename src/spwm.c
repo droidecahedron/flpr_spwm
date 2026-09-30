@@ -130,6 +130,21 @@ int spwm_start(uint32_t buf_off, uint32_t words, uint16_t cnttop, uint32_t loop_
 	return mbox_send_dt(&tx, NULL);
 }
 
+int spwm_retune(uint32_t buf_off, uint32_t words)
+{
+	volatile struct spwm_ctrl *ctrl = SPWM_CTRL;
+
+	if (ctrl->pending) {
+		return -EBUSY;
+	}
+
+	ctrl->next_buf_off = buf_off;
+	ctrl->next_buf_words = words;
+	ctrl->pending = 1;
+
+	return 0;
+}
+
 int spwm_stop(void)
 {
 	SPWM_CTRL->stop_req = 1;
