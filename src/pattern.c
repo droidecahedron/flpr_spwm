@@ -21,34 +21,88 @@ static uint32_t frame_get(const uint32_t *buf, size_t tick)
 	return (buf[tick / TICKS_PER_WORD] >> (2 * (tick % TICKS_PER_WORD))) & 0x3U;
 }
 
-int spwm_sine_build(uint32_t f_ref, uint16_t carrier_ratio, uint8_t depth_pct,
-		    uint16_t dead_ticks, uint32_t tick_hz, struct spwm_step *steps, size_t n)
+int spwm_sine_plan(uint32_t f_ref, uint16_t carrier_ratio, uint32_t tick_hz, uint32_t max_ticks,
+		   size_t max_steps, struct spwm_sine_plan *plan)
 {
-	if (f_ref == 0 || carrier_ratio == 0 || depth_pct > 100) {
+	uint64_t best_err = UINT64_MAX;
+	uint32_t best_l = 0;
+	uint32_t best_m = 0;
+
+	if (f_ref == 0 || carrier_ratio == 0 || tick_hz == 0) {
 		return -EINVAL;
 	}
 
-	uint64_t div = (uint64_t)f_ref * carrier_ratio;
-	uint32_t period = (uint32_t)((tick_hz + div / 2) / div);
+	for (uint32_t l = TICKS_PER_WORD; l <= max_ticks; l += TICKS_PER_WORD) {
+		uint32_t m = (uint32_t)(((uint64_t)f_ref * l + tick_hz / 2) / tick_hz);
 
-	if (period > UINT16_MAX || period <= 2U * dead_ticks) {
+		if (m == 0 || (uint64_t)m * carrier_ratio > max_steps) {
+			continue;
+		}
+
+		/* |tick_hz * M / L - f_ref| * L, compared across L by cross-multiplying */
+		uint64_t a = (uint64_t)tick_hz * m;
+		uint64_t b = (uint64_t)f_ref * l;
+		uint64_t err = a > b ? a - b : b - a;
+
+		if (best_l == 0 || err * best_l < best_err * l) {
+			best_err = err;
+			best_l = l;
+			best_m = m;
+			if (err == 0) {
+				break;
+			}
+		}
+	}
+
+	if (best_l == 0) {
 		return -EINVAL;
 	}
 
-	uint32_t span = period - 2U * dead_ticks;
+	plan->tick_hz = tick_hz;
+	plan->carrier_ratio = carrier_ratio;
+	plan->cycles = best_m;
+	plan->ticks = best_l;
+	plan->f_mhz = ((uint64_t)tick_hz * 1000U * best_m + best_l / 2) / best_l;
 
-	for (size_t k = 0; k < n; k++) {
-		/* Mid-period sample, k counts carrier periods */
-		float s = sinf(2.0f * PI_F * ((float)(k % carrier_ratio) + 0.5f) / carrier_ratio);
-		uint32_t on = (uint32_t)lroundf(fabsf(s) * depth_pct * span / 100.0f);
+	return 0;
+}
+
+int spwm_sine_build(const struct spwm_sine_plan *plan, uint8_t depth_pct, uint16_t dead_ticks,
+		    struct spwm_step *steps, size_t max_steps)
+{
+	uint32_t n = plan->cycles * plan->carrier_ratio;
+	uint32_t l = plan->ticks;
+
+	if (depth_pct > 100) {
+		return -EINVAL;
+	}
+	if (n > max_steps) {
+		return -ENOMEM;
+	}
+
+	for (uint32_t k = 0; k < n; k++) {
+		/* Carrier k spans [s, e), edges on the nearest tick below k * L / N */
+		uint32_t s = (uint32_t)((uint64_t)k * l / n);
+		uint32_t e = (uint32_t)((uint64_t)(k + 1) * l / n);
+		uint32_t period = e - s;
+
+		if (period > UINT16_MAX || period <= 2U * dead_ticks) {
+			return -EINVAL;
+		}
+
+		/* Phase at the carrier center (s + e) / 2, reduced mod 2L in integers first */
+		uint64_t num = ((uint64_t)plan->cycles * (s + e)) % (2ULL * l);
+		float v = sinf(2.0f * PI_F * (float)num / (float)(2U * l));
+		uint32_t on = (uint32_t)lroundf(fabsf(v) * depth_pct * (period - 2U * dead_ticks) /
+						100.0f);
 
 		steps[k].period_ticks = period;
 		steps[k].dead_ticks = dead_ticks;
 		steps[k].on_ticks = on;
-		steps[k].leg = (on == 0) ? SPWM_LEG_NONE : (s > 0.0f ? SPWM_LEG_A : SPWM_LEG_B);
+		steps[k].leg = (on == 0) ? SPWM_LEG_NONE : (v > 0.0f ? SPWM_LEG_A : SPWM_LEG_B);
 	}
 
-	return 0;
+	return (int)n;
 }
 
 int spwm_validate(const uint32_t *buf, size_t words, uint16_t min_dead_ticks)
