@@ -43,3 +43,17 @@
 &mx25r64 {
 	status = "disabled";
 };
+
+/* Control block + pattern buffers, top 32 KB of the nordic-flpr region. The FLPR image is
+ * linked into the bottom 64 KB (remote overlay). The snippet's reserved node still covers
+ * all 96 KB, so the app never links anything here.
+ * nordic_vpr_launcher copies all 96 KB from RRAM at boot, so the app fills it after that.
+ */
+/ {
+	soc {
+		spwm_shm: memory@20038000 {
+			reg = <0x20038000 DT_SIZE_K(32)>;
+			status = "reserved";
+		};
+	};
+};

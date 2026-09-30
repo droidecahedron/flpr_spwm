@@ -14,6 +14,12 @@
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/mbox.h>
 
+#include "spwm_ipc.h"
+
+/* The FLPR links into zephyr,sram. spwm_shm has to sit above it. */
+BUILD_ASSERT(SPWM_SHM_ADDR >= DT_REG_ADDR(DT_CHOSEN(zephyr_sram)) + DT_REG_SIZE(DT_CHOSEN(zephyr_sram)),
+	     "spwm_shm overlaps FLPR code/data");
+
 static const struct mbox_dt_spec rx = MBOX_DT_SPEC_GET(DT_PATH(doorbells), rx);
 static const struct mbox_dt_spec tx = MBOX_DT_SPEC_GET(DT_PATH(doorbells), tx);
 

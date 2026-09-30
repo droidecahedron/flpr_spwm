@@ -16,6 +16,8 @@
 #include <zephyr/drivers/mbox.h>
 #include <zephyr/logging/log.h>
 
+#include "spwm_ipc.h"
+
 LOG_MODULE_REGISTER(flpr_spwm, LOG_LEVEL_INF);
 
 #define START_PERIOD_MS 1000
@@ -47,6 +49,13 @@ int main(void)
 		LOG_ERR("mbox_set_enabled_dt failed (err %d)", err);
 		return err;
 	}
+
+	/* nordic_vpr_launcher has copied the FLPR image by now, so this sticks */
+	SPWM_CTRL->state = SPWM_STATE_IDLE;
+	SPWM_CTRL->err = SPWM_ERR_NONE;
+	SPWM_CTRL->version = SPWM_IPC_VERSION;
+	LOG_INF("spwm_shm 0x%08x, %u B, %u buffer words", SPWM_SHM_ADDR, SPWM_SHM_SIZE,
+		SPWM_SHM_BUF_MAX_WORDS);
 
 	LOG_INF("flpr_spwm on %s, START on task %d, DONE on event %d", CONFIG_BOARD_TARGET,
 		tx.channel_id, rx.channel_id);
