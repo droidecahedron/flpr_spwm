@@ -24,3 +24,12 @@
 &uart30 {
 	status = "disabled";
 };
+
+/* Legs A/B. VIO0 = P2.01 and VIO1 = P2.02 on nRF54L15 and nRF54LM20. The FLPR hands them to
+ * itself with CTRLSEL = VPR before it drives them.
+ */
+/ {
+	zephyr,user {
+		leg-gpios = <&gpio2 1 GPIO_ACTIVE_HIGH>, <&gpio2 2 GPIO_ACTIVE_HIGH>;
+	};
+};

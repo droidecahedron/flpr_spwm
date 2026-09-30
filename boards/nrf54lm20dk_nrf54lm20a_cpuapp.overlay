@@ -20,3 +20,23 @@
 &cpuapp_vevif_tx {
 	status = "okay";
 };
+
+/* Load marker, high while the app compiles and loads a pattern. P1.03 is only on
+ * the expansion-header gpio-map, no board device claims it.
+ */
+/ {
+	zephyr,user {
+		marker-gpios = <&gpio1 3 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+/* P2.01/P2.02 are the only VIO0/VIO1 pins and the DK routes them to the external flash.
+ * The FLPR takes them, so the flash has to go. Board Configurator moves them to the P2 header.
+ */
+&spi00 {
+	status = "disabled";
+};
+
+&mx25r64 {
+	status = "disabled";
+};
