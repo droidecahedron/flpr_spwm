@@ -29,6 +29,7 @@ The frequency can only be `tick x M / L`: M sine cycles in a buffer of L ticks, 
    |  one 2-bit step per tick
    v
  P2.01 pin A / P2.02 pin B  ->  some strange waveform requiring hardware
+                                   ^ you can put a scope here
    |
  FLPR  --DONE doorbell-->  main processor
 ```
