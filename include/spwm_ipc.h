@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <zephyr/devicetree.h>
 
-#define SPWM_IPC_VERSION 1
+#define SPWM_IPC_VERSION 2
 
 #define SPWM_SHM_ADDR DT_REG_ADDR(DT_NODELABEL(spwm_shm))
 #define SPWM_SHM_SIZE DT_REG_SIZE(DT_NODELABEL(spwm_shm))
@@ -50,12 +50,13 @@ struct spwm_ctrl {
 	uint32_t err;            /* FLPR: enum spwm_err when state is ERROR */
 	uint32_t buf_off;        /* app: buffer to play */
 	uint32_t buf_words;      /* app */
-	uint32_t next_buf_off;   /* app: retune, taken at the next wrap. 0 = none */
+	uint32_t next_buf_off;   /* app: retune, taken at the next wrap with pending. 0 = none */
 	uint32_t next_buf_words; /* app */
 	uint32_t loop_cnt;       /* app: buffer plays per START. 0 = until STOP */
 	uint32_t cnttop;         /* app: VTIM CNT0 top, tick = 128 MHz / (cnttop + 1) (O2) */
-	uint32_t stop_req;       /* app: checked at each wrap */
-	uint32_t loops_done;     /* FLPR: progress */
+	uint32_t stop_req;       /* app: taken at the next wrap with pending */
+	uint32_t loops_done;     /* FLPR: written at the end, and at a wrap that sees pending */
+	uint32_t pending;        /* app: set last, after stop_req or next_buf_*. FLPR clears it */
 };
 
 BUILD_ASSERT(sizeof(struct spwm_ctrl) <= SPWM_SHM_BUF_OFF, "control block overlaps buffers");

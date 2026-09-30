@@ -124,6 +124,7 @@ int spwm_start(uint32_t buf_off, uint32_t words, uint16_t cnttop, uint32_t loop_
 	ctrl->loop_cnt = loop_cnt;
 	ctrl->cnttop = cnttop;
 	ctrl->stop_req = 0;
+	ctrl->pending = 0;
 	ctrl->state = SPWM_STATE_ARMED;
 
 	return mbox_send_dt(&tx, NULL);
@@ -132,6 +133,7 @@ int spwm_start(uint32_t buf_off, uint32_t words, uint16_t cnttop, uint32_t loop_
 int spwm_stop(void)
 {
 	SPWM_CTRL->stop_req = 1;
+	SPWM_CTRL->pending = 1;
 
 	return mbox_send_dt(&stop, NULL);
 }

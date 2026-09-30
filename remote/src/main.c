@@ -101,32 +101,48 @@ static void stream(volatile struct spwm_ctrl *ctrl)
 	nrf_vpr_csr_vio_shift_cnt_out_set(SHIFTCNTB);
 	nrf_vpr_csr_vio_shift_ctrl_buffered_set(&shift_ctrl);
 
-	nrf_vpr_csr_vio_out_buffered_set(words[0]);
+	const volatile uint32_t *w = words;
+	const volatile uint32_t *end = words + n;
+	uint32_t played = 1; /* passes started, this one included */
+
+	nrf_vpr_csr_vio_out_buffered_set(*w++);
 	/* The counter doesn't start from 0, hrt.c "Temporary fix for max frequency" */
 	nrf_vpr_csr_vtim_simple_counter_set(0, cnttop ? cnttop : 1);
 
-	for (uint32_t i = 1; i < n; i++) {
-		/* Stalls until the shifter takes the previous word, which paces the loop */
-		nrf_vpr_csr_vio_out_buffered_set(words[i]);
-	}
+	while (1) {
+		/* Word 0 of this pass is queued, so this runs in slack. Decide now whether this
+		 * pass is the last one, and which buffer the next pass plays.
+		 */
+		bool last = (played == loops);
 
-	uint32_t played = 1;
+		if (ctrl->pending) {
+			ctrl->loops_done = played - 1;
+			if (ctrl->stop_req) {
+				last = true;
+			}
+			if (ctrl->next_buf_off) {
+				words = SPWM_BUF(ctrl->next_buf_off);
+				n = ctrl->next_buf_words;
+				ctrl->next_buf_off = 0;
+			}
+			ctrl->pending = 0;
+		}
 
-	/* Wrap: runs with one word shifting and one in OUTB, 16-32 ticks of slack */
-	while (loops == 0 || played < loops) {
-		ctrl->loops_done = played;
-		if (ctrl->stop_req) {
+		while (w != end) {
+			/* Stalls until the shifter takes the previous word, which paces the loop */
+			nrf_vpr_csr_vio_out_buffered_set(*w++);
+		}
+
+		/* Wrap. Nothing but register work before word 0 of the next pass goes out:
+		 * at a 128 MHz tick a late write costs a whole zero word (O1).
+		 */
+		if (last) {
 			break;
 		}
-		if (ctrl->next_buf_off) {
-			words = SPWM_BUF(ctrl->next_buf_off);
-			n = ctrl->next_buf_words;
-			ctrl->next_buf_off = 0;
-		}
-		for (uint32_t i = 0; i < n; i++) {
-			nrf_vpr_csr_vio_out_buffered_set(words[i]);
-		}
 		played++;
+		w = words;
+		end = words + n;
+		nrf_vpr_csr_vio_out_buffered_set(*w++);
 	}
 
 	/* First zero write returns once the last real word is in the shifter, the second once
@@ -169,6 +185,7 @@ static void run(volatile struct spwm_ctrl *ctrl)
 
 	ctrl->err = SPWM_ERR_NONE;
 	ctrl->loops_done = 0;
+	ctrl->pending = 0;
 	ctrl->state = SPWM_STATE_RUNNING;
 	stream(ctrl);
 	ctrl->state = SPWM_STATE_DONE;
