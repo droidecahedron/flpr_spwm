@@ -1,0 +1,26 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* Same doorbells as nRF54L15, see nrf54l15dk_nrf54l15_cpuflpr.overlay */
+/ {
+	doorbells {
+		compatible = "flpr-spwm-doorbells";
+		mboxes = <&cpuflpr_vevif_rx 16>, <&cpuflpr_vevif_tx 20>;
+		mbox-names = "rx", "tx";
+	};
+};
+
+&cpuflpr_vevif_rx {
+	status = "okay";
+};
+
+&cpuflpr_vevif_tx {
+	status = "okay";
+};
+
+&uart30 {
+	status = "disabled";
+};

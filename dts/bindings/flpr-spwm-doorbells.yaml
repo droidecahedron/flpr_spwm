@@ -1,0 +1,16 @@
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: Apache-2.0
+
+description: VEVIF doorbells between the app core and the FLPR
+
+compatible: "flpr-spwm-doorbells"
+
+include: base.yaml
+
+properties:
+  mboxes:
+    required: true
+
+  mbox-names:
+    required: true

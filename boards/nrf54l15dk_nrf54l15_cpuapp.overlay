@@ -1,0 +1,25 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* VEVIF doorbells. The app rings FLPR task 16 (START), and the FLPR answers on
+ * event 20 (DONE), the only FLPR->app event Zephyr's vevif event-rx accepts on 54L.
+ */
+/ {
+	doorbells {
+		compatible = "flpr-spwm-doorbells";
+		mboxes = <&cpuapp_vevif_rx 20>, <&cpuapp_vevif_tx 16>;
+		mbox-names = "rx", "tx";
+	};
+};
+
+/* nordic-flpr only enables the tx side */
+&cpuapp_vevif_rx {
+	status = "okay";
+};
+
+&cpuapp_vevif_tx {
+	status = "okay";
+};

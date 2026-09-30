@@ -1,0 +1,10 @@
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: Apache-2.0
+
+source "share/sysbuild/Kconfig"
+
+config REMOTE_BOARD
+	string "FLPR board target"
+	default "nrf54l15dk/nrf54l15/cpuflpr" if $(BOARD) = "nrf54l15dk"
+	default "nrf54lm20dk/nrf54lm20a/cpuflpr" if "$(BOARD)/$(BOARD_QUALIFIERS)" = "nrf54lm20dk/nrf54lm20a/cpuapp"
