@@ -4,14 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* VEVIF doorbells. The app rings FLPR task 16 (START), and the FLPR answers on
+/* VEVIF doorbells. The app rings FLPR task 16 (START) and 17 (STOP), and the FLPR answers on
  * event 20 (DONE), the only FLPR->app event Zephyr's vevif event-rx accepts on 54L.
  */
 / {
 	doorbells {
 		compatible = "flpr-spwm-doorbells";
-		mboxes = <&cpuapp_vevif_rx 20>, <&cpuapp_vevif_tx 16>;
-		mbox-names = "rx", "tx";
+		mboxes = <&cpuapp_vevif_rx 20>, <&cpuapp_vevif_tx 16>, <&cpuapp_vevif_tx 17>;
+		mbox-names = "rx", "tx", "stop";
 	};
 };
 

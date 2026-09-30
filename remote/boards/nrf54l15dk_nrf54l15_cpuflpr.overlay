@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* Mirror of the app overlay: START arrives on task 16, DONE leaves on event 20 */
+/* Mirror of the app overlay: START on task 16, STOP on 17, DONE leaves on event 20 */
 / {
 	doorbells {
 		compatible = "flpr-spwm-doorbells";
-		mboxes = <&cpuflpr_vevif_rx 16>, <&cpuflpr_vevif_tx 20>;
-		mbox-names = "rx", "tx";
+		mboxes = <&cpuflpr_vevif_rx 16>, <&cpuflpr_vevif_tx 20>, <&cpuflpr_vevif_rx 17>;
+		mbox-names = "rx", "tx", "stop";
 	};
 };
 

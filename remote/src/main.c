@@ -7,9 +7,9 @@
 /** @file
  *  @brief FLPR side of flpr_spwm.
  *
- *  Streams 2-bit frames out of VIO0/VIO1 through OUTB, paced by VTIM CNT0. Each START
- *  doorbell plays a fixed test pattern at the next CNTTOP from cnttop_sweep[], then
- *  rings DONE. Interrupts stay off from arm to end.
+ *  Streams 2-bit frames out of VIO0/VIO1 through OUTB, paced by VTIM CNT0. START plays
+ *  the buffer the control block points at, loop_cnt times or until stop_req, then rings
+ *  DONE. Interrupts stay off from arm to end.
  */
 
 #include <zephyr/kernel.h>
@@ -38,20 +38,9 @@ BUILD_ASSERT(LEG_B_PIN == NRF_PIN_PORT_TO_PIN_NUMBER(2, 2), "leg B must be P2.02
 /* SHIFTCNTB takes n - 1 for n shifts per word, hrt.c SHIFTCNTB_VALUE() */
 #define SHIFTCNTB (SPWM_TICKS_PER_WORD - 1)
 
-/* Test pattern, frames LSB first, frame bits [1:0] = {B, A}:
- * ticks 0-3 A high, 4-7 low, 8-11 B high, 12-15 low. A period = 16 ticks.
- */
-#define TEST_WORD 0x00AA0055U
-#define TEST_WORDS 256
-#define TEST_LOOPS 4
-
-/* One CNTTOP per START, cycled */
-static const uint16_t cnttop_sweep[] = {0, 1, 3, 7, 15, 63};
-
-static uint32_t test_buf[TEST_WORDS];
-
 static const struct mbox_dt_spec rx = MBOX_DT_SPEC_GET(DT_PATH(doorbells), rx);
 static const struct mbox_dt_spec tx = MBOX_DT_SPEC_GET(DT_PATH(doorbells), tx);
+static const struct mbox_dt_spec stop = MBOX_DT_SPEC_GET(DT_PATH(doorbells), stop);
 
 static volatile bool start_pending;
 
@@ -59,6 +48,12 @@ static void start_cb(const struct device *dev, mbox_channel_id_t channel_id, voi
 		     struct mbox_msg *data)
 {
 	start_pending = true;
+}
+
+/* stop_req is polled at each wrap with IRQs off, so the doorbell only has to be taken */
+static void stop_cb(const struct device *dev, mbox_channel_id_t channel_id, void *user_data,
+		    struct mbox_msg *data)
+{
 }
 
 static void legs_init(void)
@@ -75,11 +70,16 @@ static void legs_init(void)
 	nrf_gpio_pin_control_select(LEG_B_PIN, NRF_GPIO_PIN_SEL_VPR);
 }
 
-/* Plays words[] loops times. Order follows hrt_write() in
+/* Plays the control block's buffer. Order follows hrt_write() in
  * nrf/applications/hpf/mspi/src/hrt/hrt.c, with OUTB_TOGGLE swapped for plain OUTB.
  */
-static void stream(uint16_t cnttop, const volatile uint32_t *words, uint32_t n, uint32_t loops)
+static void stream(volatile struct spwm_ctrl *ctrl)
 {
+	const volatile uint32_t *words = SPWM_BUF(ctrl->buf_off);
+	uint32_t n = ctrl->buf_words;
+	uint32_t loops = ctrl->loop_cnt;
+	uint16_t cnttop = ctrl->cnttop;
+
 	const nrf_vpr_csr_vio_mode_out_t out_mode = {
 		.mode = NRF_VPR_CSR_VIO_SHIFT_OUTB,
 		.frame_width = FRAME_WIDTH,
@@ -110,10 +110,23 @@ static void stream(uint16_t cnttop, const volatile uint32_t *words, uint32_t n, 
 		nrf_vpr_csr_vio_out_buffered_set(words[i]);
 	}
 
-	for (uint32_t l = 1; l < loops; l++) {
+	uint32_t played = 1;
+
+	/* Wrap: runs with one word shifting and one in OUTB, 16-32 ticks of slack */
+	while (loops == 0 || played < loops) {
+		ctrl->loops_done = played;
+		if (ctrl->stop_req) {
+			break;
+		}
+		if (ctrl->next_buf_off) {
+			words = SPWM_BUF(ctrl->next_buf_off);
+			n = ctrl->next_buf_words;
+			ctrl->next_buf_off = 0;
+		}
 		for (uint32_t i = 0; i < n; i++) {
 			nrf_vpr_csr_vio_out_buffered_set(words[i]);
 		}
+		played++;
 	}
 
 	/* First zero write returns once the last real word is in the shifter, the second once
@@ -129,18 +142,43 @@ static void stream(uint16_t cnttop, const volatile uint32_t *words, uint32_t n, 
 
 	nrf_vpr_csr_vio_mode_out_set(&idle_mode);
 	nrf_vpr_csr_vio_out_set(0);
+
+	ctrl->loops_done = played;
+}
+
+static bool buf_ok(uint32_t off, uint32_t words)
+{
+	return off >= SPWM_SHM_BUF_OFF && (off % sizeof(uint32_t)) == 0 && words > 0 &&
+	       words <= (SPWM_SHM_SIZE - off) / sizeof(uint32_t);
+}
+
+static void run(volatile struct spwm_ctrl *ctrl)
+{
+	if (ctrl->version != SPWM_IPC_VERSION) {
+		ctrl->err = SPWM_ERR_VERSION;
+		ctrl->state = SPWM_STATE_ERROR;
+		return;
+	}
+
+	if (!buf_ok(ctrl->buf_off, ctrl->buf_words) ||
+	    (ctrl->next_buf_off && !buf_ok(ctrl->next_buf_off, ctrl->next_buf_words))) {
+		ctrl->err = SPWM_ERR_BUF;
+		ctrl->state = SPWM_STATE_ERROR;
+		return;
+	}
+
+	ctrl->err = SPWM_ERR_NONE;
+	ctrl->loops_done = 0;
+	ctrl->state = SPWM_STATE_RUNNING;
+	stream(ctrl);
+	ctrl->state = SPWM_STATE_DONE;
 }
 
 int main(void)
 {
-	uint32_t run = 0;
 	int err;
 
 	legs_init();
-
-	for (int i = 0; i < TEST_WORDS; i++) {
-		test_buf[i] = TEST_WORD;
-	}
 
 	err = mbox_register_callback_dt(&rx, start_cb, NULL);
 	if (err) {
@@ -148,6 +186,16 @@ int main(void)
 	}
 
 	err = mbox_set_enabled_dt(&rx, true);
+	if (err) {
+		return err;
+	}
+
+	err = mbox_register_callback_dt(&stop, stop_cb, NULL);
+	if (err) {
+		return err;
+	}
+
+	err = mbox_set_enabled_dt(&stop, true);
 	if (err) {
 		return err;
 	}
@@ -161,8 +209,7 @@ int main(void)
 		}
 		start_pending = false;
 
-		stream(cnttop_sweep[run % ARRAY_SIZE(cnttop_sweep)], test_buf, TEST_WORDS, TEST_LOOPS);
-		run++;
+		run(SPWM_CTRL);
 
 		irq_unlock(key);
 

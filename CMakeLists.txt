@@ -12,5 +12,5 @@ list(APPEND SNIPPET nordic-flpr)
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(flpr_spwm)
 
-target_sources(app PRIVATE src/main.c src/pattern.c)
+target_sources(app PRIVATE src/main.c src/pattern.c src/spwm.c)
 target_include_directories(app PRIVATE include)

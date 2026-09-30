@@ -8,8 +8,8 @@
 / {
 	doorbells {
 		compatible = "flpr-spwm-doorbells";
-		mboxes = <&cpuapp_vevif_rx 20>, <&cpuapp_vevif_tx 16>;
-		mbox-names = "rx", "tx";
+		mboxes = <&cpuapp_vevif_rx 20>, <&cpuapp_vevif_tx 16>, <&cpuapp_vevif_tx 17>;
+		mbox-names = "rx", "tx", "stop";
 	};
 };
 
