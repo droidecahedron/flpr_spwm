@@ -153,57 +153,52 @@ The buffer restarts 5.0 us in. Pulse spacing stays 32 ticks (500 ns), with no ga
 
 -screenshot- (`b3_sine_64M_wrap.png`)
 
-### 4. Buffer wrap, 128 MHz tick
-Same at 128 MHz. Before the wrap fix, 16 ticks of nothing showed up here.
-
--screenshot- (`o1_sine_128M_wrap_fixed.png`)
-
-### 5. Build time and start
+### 4. Build time and start
 P1.11 is high ~204 us while the pattern is built. The first pin edge comes ~5 us after it drops.
 
 -screenshot- (`b4_load_marker_start.png`)
 
-### 6. Done
+### 5. Done
 Last pin edge, then the short P1.11 blip when the main processor hears DONE, ~2.8 us later. Both pins stay off.
 
 -screenshot- (`b4_done.png`)
 
-### 7. Frequency change while running
+### 6. Frequency change while running
 Pulse spacing goes 32 to 33 to 34 ticks (200 kHz to 188.2 kHz) with no gap.
 
 -screenshot- (`b6_retune_switch.png`)
 
-### 8. Overview
+### 7. Overview
 The whole capture: the tests repeat every ~1 s.
 
 -screenshot- (`overview.png`)
 
-### 9. Shortest dead time, 128 MHz tick
+### 8. Shortest dead time, 128 MHz tick
 1 tick off on each side. From an A fall to the next B rise reads 10-14 ns (15.6 ns programmed). Still never on together.
 
 -screenshot- (`limit_dead_1tick.png`)
 
-### 10. Shortest pulse, 128 MHz tick
+### 9. Shortest pulse, 128 MHz tick
 Pulses of 1 to 8 ticks. The 1-tick (7.8 ns) one doesn't show on the analyzer. 2 ticks reads ~18 ns, and each tick after that adds ~8 ns.
 
 -screenshot- (`limit_min_pulse.png`)
 
-### 11. Frequency reference, 200 kHz
+### 10. Frequency reference, 200 kHz
 Plan is exactly 200000.000 Hz. 10 cycles measure 50.000 us.
 
 -screenshot- (`limit_freq_200k_ref.png`)
 
-### 12. Fine frequency, 187654.321 Hz
+### 11. Fine frequency, 187654.321 Hz
 10 cycles ~53.289 us. Carrier periods mix 68 and 69 ticks to land between whole-tick frequencies.
 
 -screenshot- (`limit_freq_187654.png`)
 
-### 13. Fine frequency, 187655.615 Hz
+### 12. Fine frequency, 187655.615 Hz
 1.3 Hz above the last one. 10 cycles are only ~0.4 ns shorter, so the plan line from the serial port goes next to it.
 
 -screenshot- (`limit_freq_187655.png`)
 
-### 14. Build time, long buffer
+### 13. Build time, long buffer
 P1.11 is high ~80 ms while the 7631-word buffer for the 187655 Hz test is built.
 
 -screenshot- (`limit_build_time.png`)
