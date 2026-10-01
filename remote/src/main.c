@@ -10,6 +10,19 @@
  *  Streams 2-bit frames out of VIO0/VIO1 through OUTB, paced by VTIM CNT0. START plays
  *  the buffer the control block points at, loop_cnt times or until stop_req, then rings
  *  DONE. Interrupts stay off from arm to end.
+ *
+ *  No instruction here toggles a pin per edge. The VIO shifter does: on every CNT0 tick
+ *  (128 MHz / (cnttop + 1)) it moves the next 2 bits of the current 32-bit word onto
+ *  P2.01 (bit 0, leg A) and P2.02 (bit 1, leg B), 16 ticks per word. The FLPR's only job
+ *  is stream(): keep writing words into OUTB. Each write stalls until the shifter takes
+ *  the previous word, so the loop runs exactly as fast as the pins need data. A late
+ *  write shifts out zeros, so both legs go low.
+ *
+ *  | where             | what                                                      |
+ *  | legs_init()       | pins to the FLPR (CTRLSEL = VPR), VIO0/VIO1 outputs, low  |
+ *  | stream(), arm     | CNT0 top = cnttop, VIO in OUTB shift mode, 2 bits/tick    |
+ *  | stream(), loop    | one csrw OUTB per word; wraps, loop count, stop, retune   |
+ *  | stream(), end     | two zero words, counter stopped, shift mode off, pins low |
  */
 
 #include <zephyr/kernel.h>
@@ -50,7 +63,9 @@ static void start_cb(const struct device *dev, mbox_channel_id_t channel_id, voi
 	start_pending = true;
 }
 
-/* stop_req is polled at each wrap with IRQs off, so the doorbell only has to be taken */
+/* stop_req is read at the start of each pass with IRQs off, so the doorbell only has to
+ * be taken
+ */
 static void stop_cb(const struct device *dev, mbox_channel_id_t channel_id, void *user_data,
 		    struct mbox_msg *data)
 {
@@ -70,7 +85,8 @@ static void legs_init(void)
 	nrf_gpio_pin_control_select(LEG_B_PIN, NRF_GPIO_PIN_SEL_VPR);
 }
 
-/* Plays the control block's buffer. Order follows hrt_write() in
+/* Feeds the VIO shifter from the control block's buffer until the pattern is done: the
+ * shifter moves the pins, this only keeps OUTB full. Arm order follows hrt_write() in
  * nrf/applications/hpf/mspi/src/hrt/hrt.c, with OUTB_TOGGLE swapped for plain OUTB.
  */
 static void stream(volatile struct spwm_ctrl *ctrl)
