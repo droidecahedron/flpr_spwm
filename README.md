@@ -1,6 +1,14 @@
 # flpr_spwm
 
 Drives a software PWM through the FLPR, the small extra processor inside the nRF54L15.
+Picture's worth a thousand words, so here's a high level overview.
+
+<img width="1247" height="621" alt="image" src="https://github.com/user-attachments/assets/8fa171fc-3c5f-4c21-a4d6-a63df20fac4b" />
+
+<img width="937" height="627" alt="image" src="https://github.com/user-attachments/assets/3cb26ee1-2347-468b-a8c0-8e512c4f5971" />
+
+<img width="937" height="627" alt="image" src="https://github.com/user-attachments/assets/3af35e4b-9b7d-4576-b9c0-c07f5cfa441b" />
+
 
 ## What it's for
 Drives two pins with any on/off pattern you like, in 7.8 ns steps, for when the PWM peripheral doesn't do exactly what you want. The pattern plays on its own without the main processor touching every edge, and the two pins are never on at once, with a gap (dead time) you choose between them. The sine-shaped pulse train in `src/main.c` is one example of a pattern.
