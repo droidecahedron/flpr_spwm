@@ -163,42 +163,37 @@ Last pin edge, then the short P1.11 blip when the main processor hears DONE, ~2.
 
 -screenshot- (`b4_done.png`)
 
-### 6. Frequency change while running
-Pulse spacing goes 32 to 33 to 34 ticks (200 kHz to 188.2 kHz) with no gap.
-
--screenshot- (`b6_retune_switch.png`)
-
-### 7. Overview
+### 6. Overview
 The whole capture: the tests repeat every ~1 s.
 
 -screenshot- (`overview.png`)
 
-### 8. Shortest dead time, 128 MHz tick
+### 7. Shortest dead time, 128 MHz tick
 1 tick off on each side. From an A fall to the next B rise reads 10-14 ns (15.6 ns programmed). Still never on together.
 
 -screenshot- (`limit_dead_1tick.png`)
 
-### 9. Shortest pulse, 128 MHz tick
+### 8. Shortest pulse, 128 MHz tick
 Pulses of 1 to 8 ticks. The 1-tick (7.8 ns) one doesn't show on the analyzer. 2 ticks reads ~18 ns, and each tick after that adds ~8 ns.
 
 -screenshot- (`limit_min_pulse.png`)
 
-### 10. Frequency reference, 200 kHz
+### 9. Frequency reference, 200 kHz
 Plan is exactly 200000.000 Hz. 10 cycles measure 50.000 us.
 
 -screenshot- (`limit_freq_200k_ref.png`)
 
-### 11. Fine frequency, 187654.321 Hz
+### 10. Fine frequency, 187654.321 Hz
 10 cycles ~53.289 us. Carrier periods mix 68 and 69 ticks to land between whole-tick frequencies.
 
 -screenshot- (`limit_freq_187654.png`)
 
-### 12. Fine frequency, 187655.615 Hz
+### 11. Fine frequency, 187655.615 Hz
 1.3 Hz above the last one. 10 cycles are only ~0.4 ns shorter, so the plan line from the serial port goes next to it.
 
 -screenshot- (`limit_freq_187655.png`)
 
-### 13. Build time, long buffer
+### 12. Build time, long buffer
 P1.11 is high ~80 ms while the 7631-word buffer for the 187655 Hz test is built.
 
 -screenshot- (`limit_build_time.png`)
