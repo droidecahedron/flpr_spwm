@@ -3,7 +3,8 @@
 Drives a software PWM through the FLPR, the small extra processor inside the nRF54L15.
 Picture's worth a thousand words, so here's a high level overview.
 
-<img width="1247" height="621" alt="image" src="https://github.com/user-attachments/assets/8fa171fc-3c5f-4c21-a4d6-a63df20fac4b" />
+<img width="764" height="381" alt="image" src="https://github.com/user-attachments/assets/729fc5d1-3938-4ea2-bcfc-87203f3cb962" />
+
 
 
 ## What it's for
