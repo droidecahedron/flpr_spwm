@@ -136,64 +136,53 @@ Run on an nRF54L15 DK. Not run on an nRF54LM20 DK.
 | frequency vs plan | within 3 mHz |
 
 ## Screenshots
-Taken in Logic 2, ch0 = P1.11, ch1 = P2.01 (A), ch2 = P2.02 (B). Where each one is in the capture files: `SHOTLIST.md` in the bench notes.
+Taken in Logic 2 with a Saleae Logic Pro 8 at 500 MS/s, build `9b8c60d`. ch0 = P1.11, ch1 = P2.01 (A), ch2 = P2.02 (B). Each one has its measurement and note in the Logic 2 panel.
 
 ### 1. A/B dead time, 64 MHz tick
-A, B, A, B pulses with 2 ticks off on each side. From an A fall to the next B rise reads ~56 ns (62.5 ns programmed). A and B are never on together.
+A, B, A, B pulses with 2 ticks off on each side. From an A fall to the next B rise reads 60 ns (62.5 ns programmed). A and B are never on together.
 
--screenshot- (`b2_alt_ab_dead_time.png`)
+![1_ab_dead_time_64M.png](bench/screenshots/1_ab_dead_time_64M.png)
 
 ### 2. Sine, 64 MHz tick, two cycles
 A's pulses grow then shrink (9, 23, 28, 23, 9 ticks), then B does the same. One cycle is 5 us, 200 kHz.
 
--screenshot- (`b3_sine_64M_two_cycles.png`)
+![2_sine_64M_two_cycles.png](bench/screenshots/2_sine_64M_two_cycles.png)
 
 ### 3. Buffer wrap, 64 MHz tick
 The buffer restarts 5.0 us in. Pulse spacing stays 32 ticks (500 ns), with no gap.
 
--screenshot- (`b3_sine_64M_wrap.png`)
+![3_buffer_wrap_64M.png](bench/screenshots/3_buffer_wrap_64M.png)
 
 ### 4. Build time and start
 P1.11 is high ~204 us while the pattern is built. The first pin edge comes ~5 us after it drops.
 
--screenshot- (`b4_load_marker_start.png`)
+![4_build_time_and_start.png](bench/screenshots/4_build_time_and_start.png)
 
 ### 5. Done
 Last pin edge, then the short P1.11 blip when the main processor hears DONE, ~2.8 us later. Both pins stay off.
 
--screenshot- (`b4_done.png`)
+![5_done.png](bench/screenshots/5_done.png)
 
 ### 6. Overview
 The whole capture: the tests repeat every ~1 s.
 
--screenshot- (`overview.png`)
+![6_overview.png](bench/screenshots/6_overview.png)
 
-### 7. Shortest dead time, 128 MHz tick
-1 tick off on each side. From an A fall to the next B rise reads 10-14 ns (15.6 ns programmed). Still never on together.
+### 7-12. Limit cases, 128 MHz tick
+Shortest dead time, shortest pulse, frequency reference and fine frequency steps, and build time for a long buffer. Open `bench/limits_sequence.sal` in Logic 2. `bench/limit_sequence.md` has the time, zoom, marker positions and expected reading for each case.
 
--screenshot- (`limit_dead_1tick.png`)
-
-### 8. Shortest pulse, 128 MHz tick
-Pulses of 1 to 8 ticks. The 1-tick (7.8 ns) one doesn't show on the analyzer. 2 ticks reads ~18 ns, and each tick after that adds ~8 ns.
-
--screenshot- (`limit_min_pulse.png`)
-
-### 9. Frequency reference, 200 kHz
-Plan is exactly 200000.000 Hz. 10 cycles measure 50.000 us.
-
--screenshot- (`limit_freq_200k_ref.png`)
-
-### 10. Fine frequency, 187654.321 Hz
-10 cycles ~53.289 us. Carrier periods mix 68 and 69 ticks to land between whole-tick frequencies.
-
--screenshot- (`limit_freq_187654.png`)
-
-### 11. Fine frequency, 187655.615 Hz
-1.3 Hz above the last one. 10 cycles are only ~0.4 ns shorter, so the plan line from the serial port goes next to it.
-
--screenshot- (`limit_freq_187655.png`)
-
-### 12. Build time, long buffer
-P1.11 is high ~80 ms while the 7631-word buffer for the 187655 Hz test is built.
-
--screenshot- (`limit_build_time.png`)
+## LEGEND
+| # | shot |
+| --- | --- |
+| 1 | A/B dead time, 64 MHz tick |
+| 2 | Sine, 64 MHz tick, two cycles |
+| 3 | Buffer wrap, 64 MHz tick |
+| 4 | Build time and start |
+| 5 | Done |
+| 6 | Overview |
+| 7 | Shortest dead time, 128 MHz tick |
+| 8 | Shortest pulse, 128 MHz tick |
+| 9 | Frequency reference, 200 kHz |
+| 10 | Fine frequency, 187654.321 Hz |
+| 11 | Fine frequency, 187655.615 Hz |
+| 12 | Build time, long buffer |
