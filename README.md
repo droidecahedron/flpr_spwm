@@ -191,3 +191,42 @@ Shortest dead time, shortest pulse, frequency reference and fine frequency steps
 | 10 | Fine frequency, 187654.321 Hz |
 | 11 | Fine frequency, 187655.615 Hz |
 | 12 | Build time, long buffer |
+
+## Extra notes
+
+### Fastest carrier: PWM peripheral vs this
+The PWM peripheral runs at 16 MHz at most, and its counter top can't go below 3 (nRF54L15 PS, PWM).
+
+| mode | max carrier | duty levels at max |
+| --- | --- | --- |
+| up, edge-aligned | 16 MHz / 3 = 5.33 MHz | 4 (62.5 ns steps) |
+| up-and-down, centered | 16 MHz / 6 = 2.67 MHz | 4 |
+
+Here the pins change once per tick (7.8 ns at 128 MHz). A carrier period needs a gap on both sides plus a pulse. On the bench the shortest pulse the analyzer saw was 2 ticks, and the shortest gap was 1 tick.
+
+| carrier | ticks per period | pulse widths, 1-tick gap each side |
+| --- | --- | --- |
+| 32 MHz | 4 | off or 2 ticks: on/off only |
+| 21.3 MHz | 6 | off, 2-4 ticks: 4 levels, same as PWM at its max |
+| 16 MHz | 8 | off, 2-6 ticks: 6 levels |
+| 5.33 MHz (PWM's max) | 24 | off, 2-22 ticks: 22 levels |
+| 2 MHz | 64 | 63 widths |
+
+At the PWM's top speed this gives 22 levels against 4. At the same 4 levels it reaches about 4 times the carrier.
+
+> [!NOTE]
+> The 32 MHz and 21.3 MHz rows are worked out from the pulse and gap measured separately. Nobody has run them as a carrier yet. Edges read 3-8 ns off on the analyzer, so the real top end needs a scope on the pins.
+
+### Letting A and B overlap
+The never-both-on rule lives in software only. The hardware plays any 2-bit value per tick, including both pins on.
+
+| layer | both on allowed? |
+| --- | --- |
+| VIO shifter | yes: frame `0b11` drives P2.01 and P2.02 high in the same tick |
+| FLPR `stream()` | yes: it copies words to the shifter without looking at them |
+| `spwm_compile()` / `spwm_validate()` in `src/pattern.c` | no: a frame with both bits set returns `-EINVAL`, and so does a change between pins without enough gap |
+| `struct spwm_step` | no: a step drives one pin, so it can't describe overlap |
+
+To get overlap, either:
+1. Write your own words into the shared buffer and call `spwm_start()`. Each frame's bits `[1:0]` are `{B, A}`, 16 frames per 32-bit word, first frame in the lowest bits. The FLPR plays exactly what you write.
+2. Add an option to `spwm_validate()` that skips the both-on check, plus a step type that drives both pins. That keeps the gap check where you still want it.
