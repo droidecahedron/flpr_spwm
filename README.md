@@ -56,10 +56,9 @@ From an nRF Connect SDK v3.4.0 terminal, in this folder:
 
 ```
 west build --sysbuild -b nrf54l15dk/nrf54l15/cpuapp
-west flash
 ```
 
-One build makes both programs, one for the main processor and one for the FLPR. `west flash` loads both.
+One build makes both programs, one for the main processor and one for the FLPR.
 
 It needs two things:
 
@@ -73,7 +72,19 @@ In VS Code, keep sysbuild on in the build configuration (it is the default).
 To also send Bluetooth advertisements while the tests run:
 
 ```
-west build -b nrf54l15dk/nrf54l15/cpuapp -- -DEXTRA_CONF_FILE=overlay-ble.conf
+west build --sysbuild -b nrf54l15dk/nrf54l15/cpuapp -- -DEXTRA_CONF_FILE=overlay-ble.conf
+```
+
+## Flash
+Then flash with either:
+
+```
+west flash
+```
+
+```
+nrfutil device program --firmware build/flpr_spwm/zephyr/zephyr.hex --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE
+nrfutil device program --firmware build/remote/zephyr/zephyr.hex --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,reset=RESET_SYSTEM
 ```
 
 ## Prebuilt image
