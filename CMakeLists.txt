@@ -6,6 +6,12 @@
 
 cmake_minimum_required(VERSION 3.20.0)
 
+# The FLPR image in remote/ only builds through sysbuild.cmake. An app-only build still links,
+# then boots whatever is in the FLPR partition.
+if(NOT SYSBUILD)
+  message(FATAL_ERROR "flpr_spwm needs sysbuild: west build --sysbuild ...")
+endif()
+
 # Reserves FLPR code/data SRAM and makes the app core boot the FLPR image.
 list(APPEND SNIPPET nordic-flpr)
 

@@ -55,11 +55,20 @@ The frequency can only be `tick x M / L`: M sine cycles in a buffer of L ticks, 
 From an nRF Connect SDK v3.4.0 terminal, in this folder:
 
 ```
-west build -b nrf54l15dk/nrf54l15/cpuapp
+west build --sysbuild -b nrf54l15dk/nrf54l15/cpuapp
 west flash
 ```
 
 One build makes both programs, one for the main processor and one for the FLPR. `west flash` loads both.
+
+It needs two things:
+
+| need | why | check |
+| --- | --- | --- |
+| sysbuild | the FLPR program in `remote/` is only built through `sysbuild.cmake`. Without sysbuild the build stops with an error | the log shows `Completed 'remote'`, and `build/remote/` exists |
+| the nRF Connect SDK toolchain (`nrfutil sdk-manager` or the VS Code extension) | it has both compilers: `arm-zephyr-eabi-gcc` for the main processor and `riscv64-zephyr-elf-gcc` for the FLPR. A plain GNU Arm toolchain (`arm-none-eabi-gcc`) can't build the FLPR | the log shows `riscv64-zephyr-elf` for the remote image |
+
+In VS Code, keep sysbuild on in the build configuration (it is the default).
 
 To also send Bluetooth advertisements while the tests run:
 
