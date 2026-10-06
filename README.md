@@ -76,6 +76,17 @@ To also send Bluetooth advertisements while the tests run:
 west build -b nrf54l15dk/nrf54l15/cpuapp -- -DEXTRA_CONF_FILE=overlay-ble.conf
 ```
 
+## Prebuilt image
+`images/sample.hex` has both programs in one file, built from this repo for the nRF54L15 DK. To try it without building:
+
+```
+nrfutil device program --firmware images/sample.hex --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,reset=RESET_SYSTEM
+```
+
+Or drag it into the Programmer app in nRF Connect for Desktop and press Write.
+
+If you build it yourself, `west flash` programs both programs. Flashing only `build/flpr_spwm/zephyr/zephyr.hex` leaves the FLPR without its program. The serial port then shows every test as `no DONE, state 1`: the main processor handed over a pattern, and nothing picked it up. Program both, or use `images/sample.hex`.
+
 ## Using it
 You pass in the frequency, how many carrier pulses per sine cycle, the depth, the dead time, the tick rate, and the longest buffer you'll accept (which trades frequency step against how fast you can change frequency).
 
