@@ -42,6 +42,17 @@ The frequency can only be `tick x M / L`: M sine cycles in a buffer of L ticks, 
 > [!NOTE]
 > Proof of concept. The main processor runs twelve fixed tests in a loop. There's no way to pick your own waveform yet without editing `src/main.c`.
 
+## Streams via vio
+You can buffer outputs for parallel GPIO updates, and there is pinctrl for individual pin dir.
+
+> [!IMPORTANT]
+> VIO pin numbering differs from general pin numbering. See the following table for pin mapping between GPIO and VIO for specific targets. ([src](https://nrfconnectdocs.nordicsemi.com/ncs/latest/nrf/app_dev/device_guides/coprocessors/rt_peripherals.html#vpr-io-vio))
+>
+> So, you can expand this sample for _more_ IO if you want.. just be mindful of how you stuff the words into the stream.
+
+<img width="599" height="451" alt="image" src="https://github.com/user-attachments/assets/73d1b0f8-cc9d-4ac7-8e61-a69000f635a0" />
+
+
 ## Requirements
 
 ### Hardware
