@@ -18,25 +18,28 @@ Drives two pins with any on/off pattern you like, in 7.8 ns steps, for when the 
 
 The frequency can only be `tick x M / L`: M sine cycles in a buffer of L ticks, where L is a multiple of 16. The planner tries every L up to your cap and keeps the closest match, so a longer cap gives a finer step. Every pulse width and dead time is a whole number of ticks, 7.8 ns at 128 MHz, the finest this chip can do. The cost of a big buffer is a slower frequency change (up to about 2 ms) and a longer build (up to about 80 ms).
 
-```
- you: frequency, carrier ratio, depth, dead time, tick, buffer cap
-   |
-   v
- main processor   spwm_sine_plan()   closest frequency the chip can make
-                  spwm_sine_build()  one pulse per carrier period
-                  spwm_compile()     packs 2 bits per tick, rejects A+B on or short dead time
-   |  writes the words and a small control block
-   v
- shared RAM (32 KB)
-   |  START doorbell
-   v
- FLPR             reads a word, hands it to the pin shifter, repeats
-   |  one 2-bit step per tick
-   v
- P2.01 pin A / P2.02 pin B  ->  some strange waveform requiring hardware
-                                   ^ you can put a scope here
-   |
- FLPR  --DONE doorbell-->  main processor
+```mermaid
+sequenceDiagram
+    participant APP as App core (Cortex-M33)
+    participant SHM as Shared RAM (spwm_shm, 32 KB)
+    participant FLPR as FLPR (RISC-V)
+
+    Note over FLPR: boot: claim P2.01/P2.02, legs low, wait for START
+    Note over APP: spwm_sine_plan()<br/>spwm_sine_build()<br/>spwm_compile() rejects A+B on or short dead time
+    APP->>SHM: pattern words, 2 bits per tick
+    APP->>SHM: control block: buffer, loop_cnt, cnttop
+    APP->>FLPR: START (VEVIF task 16)
+    FLPR->>SHM: read control block, state = RUNNING
+    loop every 16 ticks
+        SHM->>FLPR: next word
+        Note over FLPR: word to the VIO shifter, P2.01/P2.02 change every tick<br/>P2.01/P2.02 to some strange waveform requiring hardware<br/>you can put a scope here
+    end
+    opt retune or stop
+        APP->>SHM: next buffer or stop_req, then pending
+        SHM->>FLPR: read at the start of a pass
+    end
+    FLPR->>SHM: loops_done, state = DONE, legs low
+    FLPR->>APP: DONE (VEVIF event 20)
 ```
 
 > [!NOTE]
