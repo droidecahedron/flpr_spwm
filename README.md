@@ -7,10 +7,10 @@ Picture's worth a thousand words, so here's a high level overview.
 
 
 
-## What it's for
+## Overview
 Drives two pins with any on/off pattern you like, in 7.8 ns steps, for when the PWM peripheral doesn't do exactly what you want. The pattern plays on its own without the main processor touching every edge, and the two pins are never on at once, with a gap (dead time) you choose between them. The sine-shaped pulse train in `src/main.c` is one example of a pattern.
 
-## What it does
+## high-level flow
 - The main processor works out when each of two output pins should turn on and off.
 - It hands that plan to the FLPR and tells it to start.
 - The FLPR switches the pins on its own, so the main processor is free for other work.
@@ -51,36 +51,34 @@ The frequency can only be `tick x M / L`: M sine cycles in a buffer of L ticks, 
 ### Software
 - `nRF Connect SDK v3.4.0`
 
-## Build
+## Building and running
 From an nRF Connect SDK v3.4.0 terminal, in this folder:
 
 ```
 west build --sysbuild -b nrf54l15dk/nrf54l15/cpuapp
 ```
 
-One build makes both programs, one for the main processor and one for the FLPR.
-
-It needs two things:
+One build makes both programs, one for the main processor and one for FLPR.
 
 | need | why | check |
 | --- | --- | --- |
 | sysbuild | the FLPR program in `remote/` is only built through `sysbuild.cmake`. Without sysbuild the build stops with an error | the log shows `Completed 'remote'`, and `build/remote/` exists |
 | the nRF Connect SDK toolchain (`nrfutil sdk-manager` or the VS Code extension) | it has both compilers: `arm-zephyr-eabi-gcc` for the main processor and `riscv64-zephyr-elf-gcc` for the FLPR. A plain GNU Arm toolchain (`arm-none-eabi-gcc`) can't build the FLPR | the log shows `riscv64-zephyr-elf` for the remote image |
 
-In VS Code, keep sysbuild on in the build configuration (it is the default).
-
+In VS Code, **keep sysbuild** on in the build configuration (it is the default).
 To also send Bluetooth advertisements while the tests run:
 
 ```
 west build --sysbuild -b nrf54l15dk/nrf54l15/cpuapp -- -DEXTRA_CONF_FILE=overlay-ble.conf
 ```
 
-## Flash
 Then flash with either:
 
 ```
 west flash
 ```
+
+or
 
 ```
 nrfutil device program --firmware build/flpr_spwm/zephyr/zephyr.hex --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE
@@ -98,7 +96,7 @@ Or drag it into the Programmer app in nRF Connect for Desktop and press Write.
 
 If you build it yourself, `west flash` programs both programs. Flashing only `build/flpr_spwm/zephyr/zephyr.hex` leaves the FLPR without its program. The serial port then shows every test as `no DONE, state 1`: the main processor handed over a pattern, and nothing picked it up. Program both, or use `images/sample.hex`.
 
-## Using it
+## Usage
 You pass in the frequency, how many carrier pulses per sine cycle, the depth, the dead time, the tick rate, and the longest buffer you'll accept (which trades frequency step against how fast you can change frequency).
 
 ```c
@@ -171,8 +169,10 @@ Run on an nRF54L15 DK. Not run on an nRF54LM20 DK.
 | shortest dead time | 1 tick each side, reads 10-14 ns between the pins |
 | frequency vs plan | within 3 mHz |
 
-## Screenshots
-Taken in Logic 2 with a Saleae Logic Pro 8 at 500 MS/s, build `9b8c60d`. ch0 = P1.11, ch1 = P2.01 (A), ch2 = P2.02 (B). Each one has its measurement and note in the Logic 2 panel.
+## Bench Screenshots
+Taken in Logic 2 with a Saleae Logic Pro 8 at 500 MS/s, build `9b8c60d`. 
+
+ch0 = P1.11, ch1 = P2.01 (A), ch2 = P2.02 (B)
 
 ### 1. A/B dead time, 64 MHz tick
 A, B, A, B pulses with 2 ticks off on each side. From an A fall to the next B rise reads 60 ns (62.5 ns programmed). A and B are never on together.
@@ -249,7 +249,8 @@ At the PWM's top speed this gives 22 levels against 4. At the same 4 levels it r
 > The 32 MHz and 21.3 MHz rows are worked out from the pulse and gap measured separately. Nobody has run them as a carrier yet. Edges read 3-8 ns off on the analyzer, so the real top end needs a scope on the pins.
 
 ### Letting A and B overlap
-The never-both-on rule lives in software only. The hardware plays any 2-bit value per tick, including both pins on.
+**The never-both-on rule lives in software only.** The hardware plays any 2-bit value per tick, including both pins on.
+You can realistically do whatever you want with this approach or adapt it to whatever arbitrary waveform you want.
 
 | layer | both on allowed? |
 | --- | --- |
@@ -260,4 +261,4 @@ The never-both-on rule lives in software only. The hardware plays any 2-bit valu
 
 To get overlap, either:
 1. Write your own words into the shared buffer and call `spwm_start()`. Each frame's bits `[1:0]` are `{B, A}`, 16 frames per 32-bit word, first frame in the lowest bits. The FLPR plays exactly what you write.
-2. Add an option to `spwm_validate()` that skips the both-on check, plus a step type that drives both pins. That keeps the gap check where you still want it.
+2. Add an option to `spwm_validate()` that skips the both-on check, plus a step type that drives both pins, keeping the gap check where you still want it.
