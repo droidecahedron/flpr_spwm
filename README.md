@@ -63,6 +63,12 @@ You can buffer outputs for parallel GPIO updates, and there is pinctrl for indiv
 - `nRF Connect SDK v3.4.0`
 
 ## Building and running
+> [!IMPORTANT]
+> You must disable external memory with the Board Configurator application in [nRF Connect for Desktop](https://www.nordicsemi.com/Products/Development-tools/nRF-Connect-for-Desktop) to use the pins of this repo!
+
+<img width="1310" height="615" alt="image" src="https://github.com/user-attachments/assets/ca230432-f84b-4587-8a2e-8b5456407d39" />
+
+
 From an nRF Connect SDK v3.4.0 terminal, in this folder:
 
 ```
