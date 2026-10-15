@@ -55,6 +55,8 @@ static const struct bench_case cases[] = {
 	{"b3_sine_128M", SHAPE_SINE, 0, 4, 2000},
 	{"b4_n100_64M", SHAPE_SINE, 1, 2, 100},
 	{"b4_stop_64M", SHAPE_SINE, 1, 2, 0, 2000},
+	/* STOP right after START, before the FLPR picks it up: must still stop after one pass */
+	{"b4_stop_early_64M", SHAPE_SINE, 1, 2, 0, 0},
 	{"b6_retune_64M", SHAPE_RETUNE, 1, 2, 0, 1000, 0, 0, 188235},
 	/* Limits at 128 MHz: 1-tick dead time, pulse floor, fine frequency steps */
 	{"b2_alt_128M_d1", SHAPE_ALT, 0, 1, 2000},

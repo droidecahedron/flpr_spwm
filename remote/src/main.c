@@ -199,9 +199,11 @@ static void run(volatile struct spwm_ctrl *ctrl)
 		return;
 	}
 
+	/* pending is the app's: spwm_start() clears it before START. Clearing it here lost a
+	 * STOP that landed before the FLPR got to START, and loop_cnt 0 then ran forever.
+	 */
 	ctrl->err = SPWM_ERR_NONE;
 	ctrl->loops_done = 0;
-	ctrl->pending = 0;
 	ctrl->state = SPWM_STATE_RUNNING;
 	stream(ctrl);
 	ctrl->state = SPWM_STATE_DONE;
