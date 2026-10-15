@@ -72,11 +72,14 @@ You can buffer outputs for parallel GPIO updates, and there is pinctrl for indiv
 <img width="1310" height="615" alt="image" src="https://github.com/user-attachments/assets/ca230432-f84b-4587-8a2e-8b5456407d39" />
 
 
-From an nRF Connect SDK v3.4.0 terminal, in this folder:
+From an nRF Connect SDK v3.4.0 terminal. `west build` only runs inside the NCS workspace, so run it from there and point it at this repo (`<repo>` = where you cloned it):
 
 ```
-west build --sysbuild -b nrf54l15dk/nrf54l15/cpuapp
+cd <ncs>/v3.4.0
+west build --sysbuild -b nrf54l15dk/nrf54l15/cpuapp -d <repo>/build <repo>
 ```
+
+Without `-d`, the build lands in `<ncs>/v3.4.0/build`. Run from `<repo>` itself and west says `unknown command "build"`.
 
 One build makes both programs, one for the main processor and one for FLPR.
 
@@ -89,20 +92,20 @@ In VS Code, **keep sysbuild** on in the build configuration (it is the default).
 To also send Bluetooth advertisements while the tests run:
 
 ```
-west build --sysbuild -b nrf54l15dk/nrf54l15/cpuapp -- -DEXTRA_CONF_FILE=overlay-ble.conf
+west build --sysbuild -b nrf54l15dk/nrf54l15/cpuapp -d <repo>/build <repo> -- -DEXTRA_CONF_FILE=overlay-ble.conf
 ```
 
 Then flash with either:
 
 ```
-west flash
+west flash -d <repo>/build
 ```
 
 or
 
 ```
-nrfutil device program --firmware build/flpr_spwm/zephyr/zephyr.hex --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE
-nrfutil device program --firmware build/remote/zephyr/zephyr.hex --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,reset=RESET_SYSTEM
+nrfutil device program --firmware <repo>/build/flpr_spwm/zephyr/zephyr.hex --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE
+nrfutil device program --firmware <repo>/build/remote/zephyr/zephyr.hex --options chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,reset=RESET_SYSTEM
 ```
 
 ## Prebuilt image
